@@ -197,6 +197,9 @@
             <img id="live-stream-img" class="w-full h-full object-contain relative z-20 origin-center transition-transform duration-75 pointer-events-none" src="" alt="" draggable="false">
         </div>
 
+        <!-- Feedback visual das teclas (Para evitar spam e confirmar ação) -->
+        <div id="key-feedback" class="absolute bottom-6 left-6 z-[70] text-white font-mono text-xl font-bold bg-indigo-600/90 backdrop-blur-sm px-4 py-2 rounded-lg shadow-[0_5px_15px_rgba(79,70,229,0.5)] pointer-events-none transition-opacity duration-200 opacity-0 hidden"></div>
+
         <!-- MENU DE CONFIGURAÇÃO DE VÍDEO (ESTILO YOUTUBE) -->
         <div class="absolute bottom-4 right-4 sm:bottom-8 sm:right-8 z-[70] flex justify-end">
             <div class="relative">
@@ -754,7 +757,7 @@
         let isDragging = false;
         
         let controlMode = false;
-        let keyboardControlMode = false; // NOVO: Estado isolado para o teclado
+        let keyboardControlMode = false;
         let lastMoveTime = 0;
         let moveAbortController = null;
 
@@ -777,9 +780,9 @@
             keyboardControlMode = !keyboardControlMode;
             const btn = document.getElementById('btn-keyboard-mode');
             if (keyboardControlMode) {
-                btn.classList.add('bg-indigo-600'); // Cor índigo para distinguir do rato
+                btn.classList.add('bg-indigo-600'); 
                 btn.classList.remove('bg-slate-800/80');
-                streamContainerInner.focus(); // Força o foco nativo para capturar todas as teclas
+                streamContainerInner.focus(); 
             } else {
                 btn.classList.remove('bg-indigo-600');
                 btn.classList.add('bg-slate-800/80');
@@ -841,13 +844,24 @@
             } catch(err) {}
         }
 
-        // FUNÇÃO DE TECLADO MELHORADA (Mapeia e envia)
+        // MOSTRA FEEDBACK VISUAL NA TELA
+        function showKeyFeedback(keyStr) {
+            const fb = document.getElementById('key-feedback');
+            fb.innerText = keyStr.length === 1 ? keyStr.toUpperCase() : keyStr;
+            fb.classList.remove('hidden');
+            fb.style.opacity = '1';
+            clearTimeout(window.keyFbTimeout);
+            window.keyFbTimeout = setTimeout(() => {
+                fb.style.opacity = '0';
+            }, 400);
+        }
+
+        // FUNÇÃO DE TECLADO
         async function sendKeyCommand(action, e) {
             if(!keyboardControlMode || !currentStreamUrl) return;
 
             let keyName = e.key;
             
-            // Dicionário de mapeamento para o pynput (Python)
             const keyMap = {
                 ' ': 'space', 'Spacebar': 'space',
                 'Control': 'ctrl', 'Alt': 'alt', 'Shift': 'shift',
@@ -868,7 +882,6 @@
                 keyName = 'space';
             }
 
-            // Bloqueia teclas não reconhecidas ou combinadas do navegador
             if (keyName.length > 1 && !Object.values(keyMap).includes(keyName)) {
                 return; 
             }
@@ -884,11 +897,13 @@
             } catch(err) {}
         }
 
-        // OUVINTES GLOBAIS DE TECLADO
+        // OUVINTES GLOBAIS DE TECLADO (COM ANTI-SPAM)
         document.addEventListener('keydown', (e) => {
             if(keyboardControlMode && !isRecordingHotkey && !document.getElementById('global-config-modal').classList.contains('flex') && !document.getElementById('config-modal').classList.contains('flex')) {
-                e.preventDefault(); // Impede scroll e funções nativas do browser
+                if (e.repeat) return; // <-- A CORREÇÃO MESTRA: Impede de floodar o servidor
+                e.preventDefault(); 
                 sendKeyCommand('keydown', e);
+                showKeyFeedback(e.key); // <-- Mostra o balão roxo com a tecla enviada
             }
         }, {passive: false});
 
@@ -986,7 +1001,7 @@
             try {
                 await fetch(reqUrl, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 await fetch(panelUrl, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                // Atualiza também o cache local para a janela não abrir desconfigurada da próxima vez
+                
                 if(window.clientsCache[currentStreamTarget] && window.clientsCache[currentStreamTarget].panel_config) {
                     window.clientsCache[currentStreamTarget].panel_config.stream_quality = q;
                     window.clientsCache[currentStreamTarget].panel_config.stream_resolution = r;
@@ -1015,7 +1030,6 @@
             currentStreamTarget = clientId;
             currentStreamUrl = streamUrl;
             
-            // Puxar a qualidade atual que está guardada no Firebase para os sliders da Live
             const clientData = window.clientsCache[clientId] || {};
             const cfg = clientData.panel_config || {};
             const q = cfg.stream_quality || 60;
@@ -1025,7 +1039,7 @@
             document.getElementById('stream-live-resolution').value = r;
             document.getElementById('stream-live-q-val').innerText = q;
             document.getElementById('stream-live-r-val').innerText = r + '%';
-            document.getElementById('stream-settings-popup').classList.add('hidden'); // Esconder o popup de opções ao abrir
+            document.getElementById('stream-settings-popup').classList.add('hidden'); 
 
             document.getElementById('stream-modal').classList.remove('hidden');
             resetStreamZoom();
