@@ -170,11 +170,16 @@
                 <span class="truncate">Transmissão HD</span>
             </h2>
             <div class="flex gap-2 pointer-events-auto">
-                <!-- Botão Activar Interação (AnyDesk) -->
-                <button id="btn-control-mode" onclick="toggleControlMode()" class="text-gray-300 hover:text-white transition-colors bg-slate-800/80 p-2 sm:p-2.5 rounded-lg border border-slate-700 active:scale-95 shrink-0" title="Ativar Controlo Remoto (Rato e Teclado)">
+                <!-- Botão Activar Interação (Rato) -->
+                <button id="btn-control-mode" onclick="toggleControlMode()" class="text-gray-300 hover:text-white transition-colors bg-slate-800/80 p-2 sm:p-2.5 rounded-lg border border-slate-700 active:scale-95 shrink-0" title="Ativar Controlo de Rato">
                     <svg width="20" height="20" class="sm:w-6 sm:h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"></path><path d="M13 13l6 6"></path></svg>
                 </button>
                 
+                <!-- Botão Activar Interação (Teclado) -->
+                <button id="btn-keyboard-mode" onclick="toggleKeyboardMode()" class="text-gray-300 hover:text-white transition-colors bg-slate-800/80 p-2 sm:p-2.5 rounded-lg border border-slate-700 active:scale-95 shrink-0" title="Ativar Controlo de Teclado">
+                    <svg width="20" height="20" class="sm:w-6 sm:h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2" ry="2"></rect><path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M8 12h.01M12 12h.01M16 12h.01M7 16h10"></path></svg>
+                </button>
+
                 <!-- Botão Tela Cheia -->
                 <button onclick="toggleFullScreenStream()" class="text-gray-300 hover:text-white transition-colors bg-slate-800/80 p-2 sm:p-2.5 rounded-lg border border-slate-700 active:scale-95 shrink-0" title="Tela Cheia">
                     <svg width="20" height="20" class="sm:w-6 sm:h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
@@ -187,7 +192,7 @@
         </div>
         
         <!-- CONTAINER DA IMAGEM -->
-        <div id="stream-container-inner" class="flex-1 w-full h-full bg-black sm:rounded-xl sm:border sm:border-slate-800 overflow-hidden flex items-center justify-center relative shadow-2xl min-h-0 touch-none select-none z-10" tabindex="0">
+        <div id="stream-container-inner" class="flex-1 w-full h-full bg-black sm:rounded-xl sm:border sm:border-slate-800 overflow-hidden flex items-center justify-center relative shadow-2xl min-h-0 touch-none select-none z-10 focus:outline-none" tabindex="0">
             <p id="stream-status" class="absolute text-slate-500 z-10 font-mono text-xs sm:text-sm animate-pulse px-4 text-center pointer-events-none">A aguardar conexão com o alvo...</p>
             <img id="live-stream-img" class="w-full h-full object-contain relative z-20 origin-center transition-transform duration-75 pointer-events-none" src="" alt="" draggable="false">
         </div>
@@ -749,6 +754,7 @@
         let isDragging = false;
         
         let controlMode = false;
+        let keyboardControlMode = false; // NOVO: Estado isolado para o teclado
         let lastMoveTime = 0;
         let moveAbortController = null;
 
@@ -759,12 +765,24 @@
                 btn.classList.add('bg-emerald-600');
                 btn.classList.remove('bg-slate-800/80');
                 streamImg.classList.add('cursor-crosshair');
-                streamContainerInner.focus(); // Prepara para receber teclas
                 resetStreamZoom(); 
             } else {
                 btn.classList.remove('bg-emerald-600');
                 btn.classList.add('bg-slate-800/80');
                 streamImg.classList.remove('cursor-crosshair');
+            }
+        }
+
+        function toggleKeyboardMode() {
+            keyboardControlMode = !keyboardControlMode;
+            const btn = document.getElementById('btn-keyboard-mode');
+            if (keyboardControlMode) {
+                btn.classList.add('bg-indigo-600'); // Cor índigo para distinguir do rato
+                btn.classList.remove('bg-slate-800/80');
+                streamContainerInner.focus(); // Força o foco nativo para capturar todas as teclas
+            } else {
+                btn.classList.remove('bg-indigo-600');
+                btn.classList.add('bg-slate-800/80');
                 streamContainerInner.blur();
             }
         }
@@ -825,7 +843,7 @@
 
         // FUNÇÃO DE TECLADO MELHORADA (Mapeia e envia)
         async function sendKeyCommand(action, e) {
-            if(!controlMode || !currentStreamUrl) return;
+            if(!keyboardControlMode || !currentStreamUrl) return;
 
             let keyName = e.key;
             
@@ -868,14 +886,14 @@
 
         // OUVINTES GLOBAIS DE TECLADO
         document.addEventListener('keydown', (e) => {
-            if(controlMode && !isRecordingHotkey && !document.getElementById('global-config-modal').classList.contains('flex') && !document.getElementById('config-modal').classList.contains('flex')) {
+            if(keyboardControlMode && !isRecordingHotkey && !document.getElementById('global-config-modal').classList.contains('flex') && !document.getElementById('config-modal').classList.contains('flex')) {
                 e.preventDefault(); // Impede scroll e funções nativas do browser
                 sendKeyCommand('keydown', e);
             }
         }, {passive: false});
 
         document.addEventListener('keyup', (e) => {
-            if(controlMode && !isRecordingHotkey && !document.getElementById('global-config-modal').classList.contains('flex') && !document.getElementById('config-modal').classList.contains('flex')) {
+            if(keyboardControlMode && !isRecordingHotkey && !document.getElementById('global-config-modal').classList.contains('flex') && !document.getElementById('config-modal').classList.contains('flex')) {
                 e.preventDefault();
                 sendKeyCommand('keyup', e);
             }
@@ -1032,6 +1050,7 @@
             resetStreamZoom();
             
             if (controlMode) toggleControlMode(); 
+            if (keyboardControlMode) toggleKeyboardMode(); 
             
             if (document.fullscreenElement || document.webkitFullscreenElement) {
                 if (document.exitFullscreen) document.exitFullscreen();
